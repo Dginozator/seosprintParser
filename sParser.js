@@ -2992,32 +2992,69 @@ class SParsingModule {
 		var iOnPage = 0;
 		var lenPage = 0;
 
-		//
 		if (b === 0) {
 			b = await this.lastPageNum();
 		}
-		for (var i = a; i < b; i++) {
+
+		for (var i = a; i <= b; i++) {
 			await this.goNum (i);
 			await this.scanOnPage();
 
 			lenPage = this.num_elems.length;
 			for (iOnPage = 0; iOnPage < lenPage; iOnPage++) {
-				// this.num_elems[iOnPage]
+				await this.taskVerify(this.num_elems[iOnPage]);
 			}
-
-			//another page
 		}
 	}
-	async gotask(listNum) {
-		//
+	async screenTask () {
+		var dir = "tasks";
+		var task_id = 0;
+		var scrname = "";
 
-		//var all_tasks = document.querySelectorAll("table[class='work-serf'] tr");
+		console.log("for test 750");
 
+		var url = this.page.url();
+
+		var searchRes = url.match(/adv=\d+/);
+		
+		if (!!searchRes) {
+			task_id = parseInt(String(searchRes[0]));
+		}
+
+		console.log("for test 728: " + task_id);
+
+		//div[class="tskblank1"] - tag be screened
+	}
+	async taskVerify(css) {
+		var oldUrl = this.page.url();
+		var newUrl = oldUrl;
+
+		var goodflag = false;
+
+		await allLinksInOneTab(this.page);
+		await trueWaitNavigation(this.page, async () => {
+			await fastClick(this.page, css);
+		});
+
+		goodflag = await this.taskCheck ();
+		console.log("for test 748: " + goodflag);
+		goodflag = true;
+		if (goodflag) {
+			// console.log("for test 701: Good task");
+			console.log("for test 751");
+			await this.screenTask ();
+		}
+
+		newUrl = this.page.url();
+		if (newUrl !== oldUrl) {
+			await this.page.goBack();
+		}
 	}
 	async goNum (num) {
 		var flagStop = false;
-		var current = this.currentNum();
+		var current = 0;
 		while (!flagStop) {
+			current = this.currentNum();
 			if (num > current) {
 				await this.navigationGo (1);
 			}
@@ -3085,6 +3122,7 @@ class SParsingModule {
 			var len = all_tasks.length;
 			var goodFlag = true;
 			var elem = {};
+			var cssSel = "";
 
 			for (var i = 0; i < len; i++) {
 				goodFlag = true;
@@ -3106,16 +3144,17 @@ class SParsingModule {
 				}
 
 				if (goodFlag) {
-					nums_true_tasks.push(i);
+					elem = all_tasks[i].querySelector("a");
+					// elem.target = "_self";
+					cssSel = 'a[href="' + elem.getAttribute('href') + '"]';
+					nums_true_tasks.push(cssSel);
 				}
 			}
 			return(nums_true_tasks);
 		}, null);
 	}
-	taskCheck () {
+	async taskCheck () {
 		this.minusWords = [
-			"гугл",
-			"google",
 			"куки",
 			"cookies",
 			"ctrl+shift+del",
@@ -3126,27 +3165,82 @@ class SParsingModule {
 			"код"
 		]
 		this.execRatio = 10;
+		this.nonEmptyMax = 4;
 
 		var goodFlag = true;
 
-		//minus-words
+		goodFlag = await this.page.evaluate((aminus, ratio, nonEmptyMax)=>{
+			var flag = 1;
 
-		//exec:non-exec
-		if (goodFlag) {
-			//
+			var minusLen = aminus.length;
+
+			var descItem = document.querySelector('span[class="taskdescription"]');
+			var questionItem = document.querySelector('span[class="taskquestion"]');
+
+			var textDescription = descItem.textContent;
+			var textTaskquestion = questionItem.textContent;
+			var commonText = textDescription + "\n" + textTaskquestion;
+
+			//minus-words
+			for (var i = 0; i < minusLen; i++) {
+				if (commonText.search(aminus[i]) !== -1) {
+					flag = -1;
+					break;
+				}
+			}
+
+			//exec:non-exec
+			if (flag === 1) {
+				let statElem = document.querySelector("table[class='tskstat']");
+				let aNums = (String (statElem.innerHTML)).match(/>\d+</g);
+				let approved = 0;
+				let refused = 0;
+				console.log("for test 2210");
+				console.log(aNums);
+
+				approved = parseInt (aNums[0], 10);
+				refused = parseInt (aNums[1], 10);
+
+				if (approved/refused < ratio) {
+					flag = -2;
+				}
+			}
+
+			//count lines in report requires - 2 and less
+			//3 and less <br>
+			//split <br>, innerHTML
+			//for test 2222
+			if (flag === 1) {
+				let question = questionItem.innerHTML;
+				let arrLines = question.split("<br>");
+
+				let countLines = arrLines.length;
+				let nonEmptyLinesCount = 0;
+
+				for (var j = 0; j < countLines; j++) {
+					if (arrLines[j].search(/\S+/g) !== -1) {
+						nonEmptyLinesCount++;
+						if (nonEmptyLinesCount > nonEmptyMax) {
+							flag = -3;
+							break;
+						}
+					}
+				}
+			}
+
+			return (flag);
+
+		}, this.minusWords, this.execRatio, this.nonEmptyMax);
+
+		if (goodFlag < 1) {
+			console.log("for test 739: " + goodFlag);
+			goodFlag = false;
 		}
-
-		//count lines in report requires - 2 and less
-		//3 and less <br>
-		//split <br>, innerHTML
-		if (goodFlag) {
-			//
+		else {
+			goodFlag = true;
 		}
 
 		return(goodFlag);
-	}
-	wordFilter () {
-		//
 	}
 	screenTask() {
 		var result = 1;

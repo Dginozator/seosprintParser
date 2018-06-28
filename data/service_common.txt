@@ -1,0 +1,1 @@
+{"rucaptcha_key":"fa33cc8a1a3840bda753502b9a22e30a"}
