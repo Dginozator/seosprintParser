@@ -2983,6 +2983,8 @@ class SParsingModule {
 		this.page = page;
 
 		this.num_elems = [];
+
+		this.error = 0;
 	}
 	async scan() {
 		await this.toTasks();
@@ -2998,6 +3000,7 @@ class SParsingModule {
 
 		for (var i = a; i <= b; i++) {
 			await this.goNum (i);
+			await delay(1000);
 			await this.scanOnPage();
 
 			lenPage = this.num_elems.length;
@@ -3005,25 +3008,6 @@ class SParsingModule {
 				await this.taskVerify(this.num_elems[iOnPage]);
 			}
 		}
-	}
-	async screenTask () {
-		var dir = "tasks";
-		var task_id = 0;
-		var scrname = "";
-
-		console.log("for test 750");
-
-		var url = this.page.url();
-
-		var searchRes = url.match(/adv=\d+/);
-		
-		if (!!searchRes) {
-			task_id = parseInt(String(searchRes[0]));
-		}
-
-		console.log("for test 728: " + task_id);
-
-		//div[class="tskblank1"] - tag be screened
 	}
 	async taskVerify(css) {
 		var oldUrl = this.page.url();
@@ -3037,12 +3021,11 @@ class SParsingModule {
 		});
 
 		goodflag = await this.taskCheck ();
-		console.log("for test 748: " + goodflag);
-		goodflag = true;
 		if (goodflag) {
-			// console.log("for test 701: Good task");
-			console.log("for test 751");
 			await this.screenTask ();
+		}
+		else {
+			await this.screenTask (this.error);
 		}
 
 		newUrl = this.page.url();
@@ -3184,7 +3167,7 @@ class SParsingModule {
 			//minus-words
 			for (var i = 0; i < minusLen; i++) {
 				if (commonText.search(aminus[i]) !== -1) {
-					flag = -1;
+					flag = "stopWord " + aminus[i];
 					break;
 				}
 			}
@@ -3202,7 +3185,7 @@ class SParsingModule {
 				refused = parseInt (aNums[1], 10);
 
 				if (approved/refused < ratio) {
-					flag = -2;
+					flag = "a/r " + approved + ":" + refused;
 				}
 			}
 
@@ -3221,7 +3204,7 @@ class SParsingModule {
 					if (arrLines[j].search(/\S+/g) !== -1) {
 						nonEmptyLinesCount++;
 						if (nonEmptyLinesCount > nonEmptyMax) {
-							flag = -3;
+							flag = "Many q lines";
 							break;
 						}
 					}
@@ -3232,8 +3215,9 @@ class SParsingModule {
 
 		}, this.minusWords, this.execRatio, this.nonEmptyMax);
 
-		if (goodFlag < 1) {
+		if (goodFlag !== 1) {
 			console.log("for test 739: " + goodFlag);
+			this.error = goodFlag;
 			goodFlag = false;
 		}
 		else {
@@ -3242,11 +3226,33 @@ class SParsingModule {
 
 		return(goodFlag);
 	}
-	screenTask() {
-		var result = 1;
-		//
+	async screenTask (err = 0) {
+		var dir = "tasks";
+		var task_id = 0;
+		var scrname = dir + "/";
 
-		return(result);
+		var url = this.page.url();
+
+		var searchRes = url.match(/adv=\d+/);
+		
+		if (!!searchRes) {
+			task_id = (String(searchRes[0])).replace ("adv=", "");
+		}
+		if (err === 0) {
+			scrname += task_id + ".png";
+		}
+		else {
+			scrname += err + ", " + task_id + ".png";
+		}
+
+		// var taskElem = await this.page.$('div[class="tskblank4"]');
+		// var taskElem = await this.page.$('td[class="contentmain"]');
+		// await taskElem.screenshot({path: scrname, type:"png"});
+
+		await this.page.screenshot({path: scrname, type:"png", fullPage: true});
+
+		await delay(1000);
+		// elementHandle.screenshot([options])
 	}
 }
 
