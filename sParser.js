@@ -2986,9 +2986,9 @@ class SParsingModule {
 
 		this.error = 0;
 	}
-	async scan() {
+	async scan(a = 1, b = 0) {
 		await this.toTasks();
-		await this.listIterator ();
+		await this.listIterator (a, b);
 	}
 	async listIterator (a = 1, b = 0) {
 		var iOnPage = 0;
@@ -3020,14 +3020,19 @@ class SParsingModule {
 			await fastClick(this.page, css);
 		});
 
-		goodflag = await this.taskCheck ();
-		if (goodflag) {
-			await this.screenTask ();
+		try {
+			goodflag = await this.taskCheck ();
+			if (goodflag) {
+				await this.screenTask ();
+			}
+			else {
+				await this.screenTask (this.error);
+			}
 		}
-		else {
-			await this.screenTask (this.error);
+		catch(e){
+			//
 		}
-
+		
 		newUrl = this.page.url();
 		if (newUrl !== oldUrl) {
 			await this.page.goBack();
@@ -3235,6 +3240,17 @@ class SParsingModule {
 
 		var searchRes = url.match(/adv=\d+/);
 		
+		// fs.accessSync(path[, mode])
+		// fs.mkdirSync(path[, mode])
+
+		try {
+			fs.accessSync(dir);
+		}
+		catch(e) {
+			console.log("create scr dir");
+			fs.mkdirSync(dir);
+		}
+
 		if (!!searchRes) {
 			task_id = (String(searchRes[0])).replace ("adv=", "");
 		}
